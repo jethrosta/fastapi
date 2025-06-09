@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KaloriKu - Deteksi Kalori Makanan</title>
+    <style>
+        /* Ini adalah bagian CSS kita */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            background-color: #f4f4f9;
+            margin: 0;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 500px;
+        }
+        h1 {
+            color: #333;
+        }
+        input[type="file"] {
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 25px;
+            font-size: 18px;
+            color: #333;
+            min-height: 50px; /* Memberi ruang agar layout tidak loncat */
+        }
+        #imagePreview {
+            margin-top: 20px;
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>KaloriKu</h1>
+        <p>Unggah gambar makanan untuk mengetahui estimasi kalorinya.</p>
+        
+        <input type="file" id="imageInput" accept="image/*">
+        
+        <button onclick="uploadAndDetect()">Deteksi Kalori</button>
+        
+        <img id="imagePreview" src="" alt="Pratinjau Gambar">
+
+        <div id="result">
+            <p>Hasil deteksi akan muncul di sini.</p>
+        </div>
+    </div>
+
+    <script>
+        // Tampilkan pratinjau gambar saat pengguna memilih file
+        document.getElementById('imageInput').addEventListener('change', function(event){
+            const preview = document.getElementById('imagePreview');
+            const file = event.target.files[0];
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+                preview.style.display = 'block';
+            }
+        });
+
+        // Fungsi yang akan dijalankan saat tombol "Deteksi Kalori" diklik
+        async function uploadAndDetect() {
+            const imageInput = document.getElementById('imageInput');
+            const resultDiv = document.getElementById('result');
+            
+            // 1. Cek apakah pengguna sudah memilih file
+            if (imageInput.files.length === 0) {
+                resultDiv.innerHTML = '<p style="color: red;">Silakan pilih sebuah gambar terlebih dahulu.</p>';
+                return;
+            }
+
+            const file = imageInput.files[0];
+            
+            // 2. Siapkan "paket" untuk dikirim ke API
+            const formData = new FormData();
+            formData.append('image', file); // 'image' harus sama dengan nama parameter di FastAPI!
+
+            resultDiv.innerHTML = '<p>Mendeteksi, mohon tunggu...</p>';
+
+            try {
+                // 3. Kirim permintaan ke backend FastAPI kita
+                const response = await fetch('http://127.0.0.1:8000/detect_food', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error dari server: ${response.statusText}`);
+                }
+
+                // 4. Ambil data JSON dari respons
+                const data = await response.json();
+
+                // 5. Tampilkan hasilnya di halaman web
+                resultDiv.innerHTML = `
+                    <h3>Hasil Deteksi:</h3>
+                    <p><strong>Makanan:</strong> ${data.detected_food}</p>
+                    <p><strong>Estimasi Kalori:</strong> ${data.estimated_calories_kcal} kkal</p>
+                `;
+
+            } catch (error) {
+                console.error('Gagal menghubungi API:', error);
+                resultDiv.innerHTML = '<p style="color: red;">Gagal terhubung ke server. Pastikan server API sudah berjalan.</p>';
+            }
+        }
+    </script>
+
+</body>
+</html>
